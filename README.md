@@ -79,6 +79,48 @@ python scripts/export_onnx.py yolov8n.pt --img-size 640 640 --out models/yolov8n
 
 After exporting, point `detector.backend` to `yolo_onnx` and set `detector.model_path` to the generated `.onnx` file in your YAML configuration.
 
+## Running the Pipeline from the Terminal
+
+The refactored package exposes a first-class CLI so you can drive the modular pipeline directly—no need to rely on the legacy monolithic demo script.
+
+### Quick start (installed as a package)
+
+When installed with `pip install -e .`, the project registers a `yolo-ocr` console script:
+
+```bash
+yolo-ocr --config configs/default.yaml image samples/car.jpg --output artifacts/car_annotated.jpg
+```
+
+### Using Python directly
+
+If you prefer not to install the console entry point, you can run the CLI module in-place:
+
+```bash
+python -m yolo_ocr.cli --config configs/default.yaml image samples/car.jpg --output artifacts/car_annotated.jpg
+```
+
+### Image mode
+
+```
+python -m yolo_ocr.cli --config configs/default.yaml image /path/to/frame.jpg --output out.jpg
+```
+
+- Prints plate predictions (text + confidence) to stdout.
+- Writes an annotated copy when `--output` is provided.
+
+### Video/camera mode
+
+```
+python -m yolo_ocr.cli --config configs/default.yaml video data/traffic.mp4 --output runs/traffic.mp4 --stride 2
+```
+
+- Accepts file paths or camera indices (e.g. `video 0`).
+- Prints per-frame predictions.
+- Saves an annotated video if `--output` is specified (defaults to `mp4v`, override FPS with `--fps`).
+- Skips frames using `--stride` for faster throughput without altering detection/recognition settings.
+
+Use this entry point for production integrations, CLI demos, or rapid experiments. The CLI internally instantiates the same `create_pipeline` factory used in the Python API so all configuration and optimization features remain available.
+
 ## Usage Example
 
 ```python
@@ -130,25 +172,9 @@ for output in run_on_video("video.mp4", "configs/default.yaml", stride=2):
 
 Override any setting programmatically by calling `create_pipeline(..., overrides={...})`.
 
-## Running the Main Demo Script
+## Legacy demo (`yolo2_multi_guardrails.py`)
 
-The repository keeps the original end-to-end demonstration in `yolo2_multi_guardrails.py`. This script wires YOLO detection together with an OpenAI-powered OCR guardrail and video writer—handy for validating the full legacy flow or showcasing the pipeline without writing additional glue code.
-
-1. **Configure paths and credentials:** Open the file and update the constants near the top:
-   - `YOLO("/path/to/weights.pt")` should reference your trained YOLO weights.
-   - `cv2.VideoCapture("/path/to/input.mp4")` must point to the video or RTSP stream you want to process.
-   - Set `OPENAI_API_KEY` in your environment (the script reads it when instantiating `OpenAI`).
-   - Update `out_path` to control where the annotated video is saved.
-2. **(Optional) Tune thresholds:** The configuration block defines detection thresholds, ROI cropping, and smoothing parameters—adjust them before running if needed.
-3. **Run from the terminal:**
-
-   ```bash
-   OPENAI_API_KEY=sk-... python yolo2_multi_guardrails.py
-   ```
-
-   The script prints the selected device (`cpu`/`cuda`), processes the video frame by frame, and writes the annotated output to the path you configured. Press `Ctrl+C` to stop early.
-
-For production use, prefer the modular `yolo_ocr` package plus `scripts/benchmark.py` for profiling and your own application glue, but the demo script remains available for quick end-to-end experiments.
+The historical `yolo2_multi_guardrails.py` remains in the repository for reference, but it is no longer the recommended entry point. Its hard-coded configuration and external dependencies are superseded by the modular `yolo_ocr` package and CLI. Stick to the new `yolo-ocr` command (or `python -m yolo_ocr.cli`) unless you need to reproduce the original experiment end-to-end.
 
 ## Optimization Tips
 

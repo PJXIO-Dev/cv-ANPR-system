@@ -26,6 +26,8 @@ class VideoReader:
         self.stride = max(1, stride)
         self.warmup = max(0, warmup)
         self._cap: Optional[cv2.VideoCapture] = None
+        self.fps: float = 0.0
+        self.frame_size: tuple[int, int] | None = None
 
     def __enter__(self) -> "VideoReader":
         self.open()
@@ -39,6 +41,10 @@ class VideoReader:
             self._cap = cv2.VideoCapture(self.source)
             if not self._cap.isOpened():
                 raise RuntimeError(f"Unable to open video source: {self.source}")
+            self.fps = float(self._cap.get(cv2.CAP_PROP_FPS) or 0.0)
+            width = int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+            height = int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+            self.frame_size = (width, height) if width > 0 and height > 0 else None
             for _ in range(self.warmup):
                 self._cap.read()
 
@@ -46,13 +52,15 @@ class VideoReader:
         if self._cap is not None:
             self._cap.release()
             self._cap = None
+            self.fps = 0.0
+            self.frame_size = None
 
     def frames(self) -> Generator[VideoFrame, None, None]:
         if self._cap is None:
             self.open()
         assert self._cap is not None
         index = 0
-        fps = self._cap.get(cv2.CAP_PROP_FPS) or 0.0
+        fps = self.fps
         while True:
             ret, frame = self._cap.read()
             if not ret:

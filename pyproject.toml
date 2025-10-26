@@ -33,3 +33,6 @@ onnx = [
 
 [project.urls]
 Homepage = "https://github.com/your-org/cv-ANPR-system"
+
+[project.scripts]
+yolo-ocr = "yolo_ocr.cli:main"
