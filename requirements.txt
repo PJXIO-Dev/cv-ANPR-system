@@ -1,0 +1,6 @@
+numpy
+opencv-python
+pillow
+pytesseract
+PyYAML
+ultralytics>=8.2.0
