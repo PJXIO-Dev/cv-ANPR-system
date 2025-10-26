@@ -70,6 +70,8 @@ def draw_detections(image: np.ndarray, detections: Iterable[PlatePrediction]) ->
 
     output = image.copy()
     for det in detections:
+        if not det.text:
+            continue
         x1, y1, x2, y2 = map(int, det.bbox)
         _draw_vehicle_box_and_label(output, (x1, y1, x2, y2), det.text, det.confidence)
     return output
