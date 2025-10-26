@@ -18,6 +18,7 @@ class PlatePrediction:
     confidence: float
     class_name: str
     text: str
+    track_id: int | None = None
 
 
 def sanitize_text(text: str) -> str:

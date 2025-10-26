@@ -51,12 +51,22 @@ class PostprocessConfig:
 
 
 @dataclass
+class TrackerConfig:
+    """Configuration for license-plate tracking across frames."""
+
+    match_iou_threshold: float = 0.3
+    max_lost_frames: int = 15
+    min_init_confidence: float = 0.1
+
+
+@dataclass
 class PipelineConfig:
     """High level pipeline configuration."""
 
     detector: DetectorConfig = field(default_factory=DetectorConfig)
     ocr: OCRConfig = field(default_factory=OCRConfig)
     postprocess: PostprocessConfig = field(default_factory=PostprocessConfig)
+    tracker: TrackerConfig = field(default_factory=TrackerConfig)
     num_workers: int = 0
     visualize: bool = True
 
@@ -83,10 +93,12 @@ def load_config(path: str | Path | None = None, overrides: Optional[Dict[str, An
     detector = DetectorConfig(**data.get("detector", {}))
     ocr = OCRConfig(**data.get("ocr", {}))
     postprocess = PostprocessConfig(**data.get("postprocess", {}))
+    tracker = TrackerConfig(**data.get("tracker", {}))
     pipeline = PipelineConfig(
         detector=detector,
         ocr=ocr,
         postprocess=postprocess,
+        tracker=tracker,
         num_workers=data.get("num_workers", 0),
         visualize=data.get("visualize", True),
     )
@@ -96,6 +108,7 @@ def load_config(path: str | Path | None = None, overrides: Optional[Dict[str, An
 __all__ = [
     "DetectorConfig",
     "OCRConfig",
+    "TrackerConfig",
     "PipelineConfig",
     "PostprocessConfig",
     "load_config",

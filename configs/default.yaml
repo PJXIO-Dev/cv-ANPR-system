@@ -23,5 +23,9 @@ postprocess:
   min_confidence: 0.25
   keep_top_k: 10
   replace_invalid_with_empty: true
+tracker:
+  match_iou_threshold: 0.3
+  max_lost_frames: 15
+  min_init_confidence: 0.1
 num_workers: 0
 visualize: true

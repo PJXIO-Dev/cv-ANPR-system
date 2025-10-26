@@ -6,7 +6,7 @@ A modular, production-ready pipeline that detects vehicles/license plates with Y
 
 - Ultralytics YOLO detector with ROI cropping, batching, and FP16 inference
 - Plug-and-play OCR backends (Tesseract by default, TrOCR/Paddle/OpenAI hooks ready)
-- Unified post-processing with regex validation and deduplication
+- Unified post-processing with regex validation, deduplication, and per-vehicle tracking
 - Optional visualization utilities for debugging and demos
 - Benchmark/export scripts for measuring throughput and converting to ONNX
 
@@ -134,6 +134,17 @@ for output in run_on_video("video.mp4", "configs/default.yaml", stride=2):
     ...  # consume PipelineResult objects
 ```
 
+### Per-vehicle tracking and history
+
+Each processed frame runs through a lightweight IoU tracker so that every vehicle keeps its own highest-confidence plate text:
+
+- **Detect everything:** detections from YOLO are kept per vehicle—no frame-wide suppression of confident boxes.
+- **Keep the best read:** every track stores the highest-confidence OCR text it has ever seen. Later, lower-confidence reads will not overwrite earlier, cleaner values.
+- **Follow the vehicle:** tracks persist while a vehicle remains in view (configurable) so the same ID follows it across frames.
+- **Avoid duplicates:** the tracker requires spatial overlap before matching, preventing different vehicles from clobbering each other's plate strings even when OCR outputs identical text.
+
+Tune the tracker thresholds in `configs/default.yaml` if your scene demands longer persistence or stricter association (see the configuration table below).
+
 ## Support Utilities (`scripts/`)
 
 Two optional helper scripts live in the `scripts/` directory to support deployment and optimization workflows. They are not required for day-to-day inference but make it easier to profile and accelerate the detector when needed.
@@ -188,6 +199,9 @@ After exporting, point `detector.backend` to `yolo_onnx` and set `detector.model
 | `postprocess.min_confidence` | Minimum detector confidence. |
 | `postprocess.keep_top_k` | Optional cap on predictions per frame. |
 | `postprocess.plate_regex` | Optional regex to validate license plates. Leave blank to accept all sanitized OCR text. |
+| `tracker.match_iou_threshold` | Minimum IoU required to associate a detection with an existing vehicle track. |
+| `tracker.max_lost_frames` | Number of consecutive frames to keep following a vehicle after it temporarily drops out. |
+| `tracker.min_init_confidence` | Minimum detector confidence needed to spawn a new track. |
 | `visualize` | Save annotated frames when true. |
 
 Override any setting programmatically by calling `create_pipeline(..., overrides={...})`.

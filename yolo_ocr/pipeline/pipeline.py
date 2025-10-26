@@ -12,6 +12,7 @@ from yolo_ocr.detectors.base import Detection, Detector
 from yolo_ocr.ocr.base import OCR
 from yolo_ocr.pipeline import postprocess
 from yolo_ocr.pipeline.postprocess import PlatePrediction
+from yolo_ocr.pipeline.tracker import PlateTracker
 from yolo_ocr.utils.vis import draw_detections
 
 
@@ -30,10 +31,12 @@ class YoloOcrPipeline:
         self.detector = detector
         self.ocr = ocr
         self.config = config
+        self.tracker = PlateTracker(config.tracker)
 
     def load(self) -> None:
         self.detector.load()
         self.ocr.load()
+        self.tracker.reset()
         if self.config.detector.warmup_iterations > 0:
             dummy_shape = (self.config.ocr.resize_height, self.config.ocr.resize_width, 3)
             self.detector.warmup(
@@ -90,7 +93,8 @@ class YoloOcrPipeline:
         filtered = postprocess.deduplicate(mapped, self.config.postprocess)
         crops = [self._crop_plate(image, det.bbox) for det in filtered]
         ocr_results = self.ocr.recognize(crops)
-        predictions = postprocess.merge(filtered, ocr_results, self.config.postprocess) if ocr_results else []
+        merged = postprocess.merge(filtered, ocr_results, self.config.postprocess) if ocr_results else []
+        predictions = self.tracker.update(merged)
         annotated = None
         if self.config.visualize and predictions:
             annotated = draw_detections(image, predictions)
@@ -114,12 +118,16 @@ class YoloOcrPipeline:
             orig_images.append(image)
 
         detections_batches = self.detector.infer(resized_images)
-        for dets, image, scale, offset in zip(detections_batches, orig_images, scales, offsets):
+        for idx, image in enumerate(orig_images):
+            dets = detections_batches[idx] if idx < len(detections_batches) else []
+            scale = scales[idx]
+            offset = offsets[idx]
             mapped = [self._map_detection(det, scale, offset) for det in dets]
             filtered = postprocess.deduplicate(mapped, self.config.postprocess)
             crops = [self._crop_plate(image, det.bbox) for det in filtered]
             ocr_results = self.ocr.recognize(crops)
-            predictions = postprocess.merge(filtered, ocr_results, self.config.postprocess) if ocr_results else []
+            merged = postprocess.merge(filtered, ocr_results, self.config.postprocess) if ocr_results else []
+            predictions = self.tracker.update(merged)
             annotated = draw_detections(image, predictions) if self.config.visualize and predictions else None
             results.append(PipelineResult(predictions=predictions, annotated=annotated))
         return results
