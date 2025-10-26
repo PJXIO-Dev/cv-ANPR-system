@@ -47,6 +47,38 @@ A modular, production-ready pipeline that detects vehicles/license plates with Y
 
 Each module focuses on a single responsibility and can be swapped or extended independently.
 
+## Command-line Utilities (`scripts/`)
+
+Two helper scripts live in the `scripts/` directory to support deployment and optimization workflows:
+
+### `scripts/benchmark.py`
+
+Use this tool whenever you need to measure end-to-end latency or frames-per-second for a particular video source and configuration. It loads the pipeline described in your YAML config, runs it over the specified number of frames, and prints moving-average timing statistics so you can compare baseline versus accelerated settings.
+
+```bash
+python scripts/benchmark.py <video_or_camera> --config configs/default.yaml --frames 500 --stride 2
+```
+
+- `<video_or_camera>` accepts a path to a file (e.g., `data/traffic.mp4`) or a camera index like `0` for a webcam.
+- `--frames` controls how many frames to profile (default `200`).
+- `--stride` lets you skip frames (e.g., `--stride 2` processes every other frame).
+- Adjust the YAML file to toggle batching, FP16, or alternate backends and rerun the benchmark to observe the impact.
+
+### `scripts/export_onnx.py`
+
+Run this script when you want to deploy the YOLO detector with ONNX Runtime or TensorRT. It wraps Ultralytics' built-in export and exposes the most common knobs via CLI flags.
+
+```bash
+python scripts/export_onnx.py yolov8n.pt --img-size 640 640 --out models/yolov8n.onnx --opset 12 --dynamic
+```
+
+- `--img-size` sets the input resolution (width height) you plan to serve.
+- `--out` specifies where the exported ONNX file will be written.
+- `--opset` controls the ONNX opset version (use a value supported by your runtime).
+- Pass `--dynamic` when you need dynamic batch dimensions for batched inference.
+
+After exporting, point `detector.backend` to `yolo_onnx` and set `detector.model_path` to the generated `.onnx` file in your YAML configuration.
+
 ## Usage Example
 
 ```python
@@ -97,6 +129,26 @@ for output in run_on_video("video.mp4", "configs/default.yaml", stride=2):
 | `visualize` | Save annotated frames when true. |
 
 Override any setting programmatically by calling `create_pipeline(..., overrides={...})`.
+
+## Running the Main Demo Script
+
+The repository keeps the original end-to-end demonstration in `yolo2_multi_guardrails.py`. This script wires YOLO detection together with an OpenAI-powered OCR guardrail and video writer—handy for validating the full legacy flow or showcasing the pipeline without writing additional glue code.
+
+1. **Configure paths and credentials:** Open the file and update the constants near the top:
+   - `YOLO("/path/to/weights.pt")` should reference your trained YOLO weights.
+   - `cv2.VideoCapture("/path/to/input.mp4")` must point to the video or RTSP stream you want to process.
+   - Set `OPENAI_API_KEY` in your environment (the script reads it when instantiating `OpenAI`).
+   - Update `out_path` to control where the annotated video is saved.
+2. **(Optional) Tune thresholds:** The configuration block defines detection thresholds, ROI cropping, and smoothing parameters—adjust them before running if needed.
+3. **Run from the terminal:**
+
+   ```bash
+   OPENAI_API_KEY=sk-... python yolo2_multi_guardrails.py
+   ```
+
+   The script prints the selected device (`cpu`/`cuda`), processes the video frame by frame, and writes the annotated output to the path you configured. Press `Ctrl+C` to stop early.
+
+For production use, prefer the modular `yolo_ocr` package plus `scripts/benchmark.py` for profiling and your own application glue, but the demo script remains available for quick end-to-end experiments.
 
 ## Optimization Tips
 
