@@ -26,7 +26,21 @@ A modular, production-ready pipeline that detects vehicles/license plates with Y
    - `pytesseract` requires a local Tesseract binary (see <https://tesseract-ocr.github.io/tessdoc/Installation.html>)
    - `pip install paddleocr` for PaddleOCR
    - `pip install transformers accelerate sentencepiece` for TrOCR
-   - `pip install openai` for the GPT OCR preview (requires an `OPENAI_API_KEY` in the environment)
+   - `pip install openai` for the GPT OCR preview
+
+### Setting the `OPENAI_API_KEY`
+
+The GPT OCR backend authenticates with OpenAI using the `OPENAI_API_KEY` environment variable. Set it before running the
+pipeline (replace the value with your real key):
+
+```bash
+export OPENAI_API_KEY="sk-..."      # macOS/Linux
+set OPENAI_API_KEY=sk-...           # Windows Command Prompt
+$Env:OPENAI_API_KEY="sk-..."        # Windows PowerShell
+```
+
+The CLI and Python API will automatically detect the variable at runtime; no additional YAML changes are required. If the key
+is absent or invalid, the logs will report that GPT OCR was skipped and the configured fallback backend is in use.
 
 ## Project Structure
 
