@@ -47,6 +47,12 @@ A modular, production-ready pipeline that detects vehicles/license plates with Y
 
 Each module focuses on a single responsibility and can be swapped or extended independently.
 
+### Default data directories
+
+- `models/` – store YOLO checkpoints or exported ONNX/TensorRT engines here; update `configs/default.yaml` if you relocate them.
+- `input/` – drop ad-hoc test images or videos here before invoking the CLI (e.g., `python3 -m yolo_ocr.cli image input/car.jpg`).
+- `output/` – the CLI examples below save annotated artifacts to this folder so results stay organized and tracked by git.
+
 ## Main Pipeline Usage (`yolo_ocr`)
 
 The refactored package exposes a first-class CLI and Python API so you can run the modular pipeline directly—no legacy scripts required.
@@ -60,13 +66,13 @@ yolo-ocr --config configs/default.yaml image samples/car.jpg --output artifacts/
 ### Running the CLI module directly
 
 ```bash
-python -m yolo_ocr.cli --config configs/default.yaml image samples/car.jpg --output artifacts/car_annotated.jpg
+python3 -m yolo_ocr.cli --config configs/default.yaml image samples/car.jpg --output output/car_annotated.jpg
 ```
 
 ### Image mode
 
 ```bash
-python -m yolo_ocr.cli --config configs/default.yaml image /path/to/frame.jpg --output out.jpg
+python3 -m yolo_ocr.cli --config configs/default.yaml image input/frame.jpg --output output/frame_annotated.jpg
 ```
 
 - Prints plate predictions (text + confidence) to stdout.
@@ -75,7 +81,7 @@ python -m yolo_ocr.cli --config configs/default.yaml image /path/to/frame.jpg --
 ### Video/camera mode
 
 ```bash
-python -m yolo_ocr.cli --config configs/default.yaml video data/traffic.mp4 --output runs/traffic.mp4 --stride 2
+python3 -m yolo_ocr.cli --config configs/default.yaml video input/traffic.mp4 --output output/traffic.mp4 --stride 2
 ```
 
 - Accepts file paths or camera indices (e.g. `video 0`).
