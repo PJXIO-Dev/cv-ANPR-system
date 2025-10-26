@@ -21,7 +21,7 @@ A modular, production-ready pipeline that detects vehicles/license plates with Y
    pip install -e .
    ```
 
-3. Download a YOLO checkpoint (e.g. `yolov8n.pt`) and update `configs/default.yaml` if needed.
+3. Download a YOLO checkpoint (e.g. `yolov8n.pt`) into `models/` (create the folder if it does not exist). The default config expects `models/yolov8n.pt`, so adjust `detector.model_path` if you choose a different location or filename.
 4. (Optional) Install OCR extras:
    - `pytesseract` requires a local Tesseract binary (see <https://tesseract-ocr.github.io/tessdoc/Installation.html>)
    - `pip install paddleocr` for PaddleOCR
@@ -148,7 +148,7 @@ After exporting, point `detector.backend` to `yolo_onnx` and set `detector.model
 | Key | Description |
 | --- | --- |
 | `detector.backend` | Detection backend (`yolo_ultralytics`, `yolo_onnx`, `yolo_tensorrt`). |
-| `detector.model_path` | Path to YOLO weights (`.pt` or exported engine). |
+| `detector.model_path` | Path to YOLO weights (`.pt` or exported engine). Defaults to `models/yolov8n.pt`; update if you store the model elsewhere. |
 | `detector.conf_threshold` / `iou_threshold` | Confidence and NMS thresholds. |
 | `detector.device` | `auto`, `cpu`, `cuda:0`, etc. |
 | `detector.fp16` | Enable half precision for compatible GPUs. |
