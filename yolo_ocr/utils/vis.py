@@ -26,7 +26,8 @@ def draw_detections(image: np.ndarray, detections: Iterable[PlatePrediction], st
     for det in detections:
         x1, y1, x2, y2 = map(int, det.bbox)
         cv2.rectangle(output, (x1, y1), (x2, y2), style.color, style.thickness)
-        label = f"{det.text or 'UNK'} ({det.confidence:.2f})"
+        text_display = det.text if det.text not in (None, "") else "None"
+        label = f"{text_display} ({det.confidence:.2f})"
         (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, style.font_scale, style.font_thickness)
         cv2.rectangle(output, (x1, y1 - text_h - baseline), (x1 + text_w, y1), style.color, -1)
         cv2.putText(
