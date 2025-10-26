@@ -156,8 +156,8 @@ After exporting, point `detector.backend` to `yolo_onnx` and set `detector.model
 | `detector.backend` | Detection backend (`yolo_ultralytics`, `yolo_onnx`, `yolo_tensorrt`). |
 | `detector.model_path` | Path to YOLO weights (`.pt` or exported engine). Defaults to `models/yolov8n.pt`; update if you store the model elsewhere. |
 | `detector.conf_threshold` / `iou_threshold` | Confidence and NMS thresholds. |
-| `detector.device` | `auto`, `cpu`, `cuda:0`, etc. |
-| `detector.fp16` | Enable half precision for compatible GPUs. |
+| `detector.device` | `auto`, `cpu`, `cuda:0`, etc. The pipeline automatically falls back to CPU when CUDA isn't available. |
+| `detector.fp16` | Enable half precision for compatible GPUs (automatically disabled on CPU fallback). |
 | `detector.batch_size` | Batch size for inference. |
 | `detector.warmup_iterations` | Number of warm-up passes to stabilize latency. |
 | `detector.roi_from_center` / `roi_start_fraction` | Process only lower portion of the frame to save compute. |
