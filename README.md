@@ -47,53 +47,17 @@ A modular, production-ready pipeline that detects vehicles/license plates with Y
 
 Each module focuses on a single responsibility and can be swapped or extended independently.
 
-## Command-line Utilities (`scripts/`)
+## Main Pipeline Usage (`yolo_ocr`)
 
-Two helper scripts live in the `scripts/` directory to support deployment and optimization workflows:
+The refactored package exposes a first-class CLI and Python API so you can run the modular pipeline directly—no legacy scripts required.
 
-### `scripts/benchmark.py`
-
-Use this tool whenever you need to measure end-to-end latency or frames-per-second for a particular video source and configuration. It loads the pipeline described in your YAML config, runs it over the specified number of frames, and prints moving-average timing statistics so you can compare baseline versus accelerated settings.
-
-```bash
-python scripts/benchmark.py <video_or_camera> --config configs/default.yaml --frames 500 --stride 2
-```
-
-- `<video_or_camera>` accepts a path to a file (e.g., `data/traffic.mp4`) or a camera index like `0` for a webcam.
-- `--frames` controls how many frames to profile (default `200`).
-- `--stride` lets you skip frames (e.g., `--stride 2` processes every other frame).
-- Adjust the YAML file to toggle batching, FP16, or alternate backends and rerun the benchmark to observe the impact.
-
-### `scripts/export_onnx.py`
-
-Run this script when you want to deploy the YOLO detector with ONNX Runtime or TensorRT. It wraps Ultralytics' built-in export and exposes the most common knobs via CLI flags.
-
-```bash
-python scripts/export_onnx.py yolov8n.pt --img-size 640 640 --out models/yolov8n.onnx --opset 12 --dynamic
-```
-
-- `--img-size` sets the input resolution (width height) you plan to serve.
-- `--out` specifies where the exported ONNX file will be written.
-- `--opset` controls the ONNX opset version (use a value supported by your runtime).
-- Pass `--dynamic` when you need dynamic batch dimensions for batched inference.
-
-After exporting, point `detector.backend` to `yolo_onnx` and set `detector.model_path` to the generated `.onnx` file in your YAML configuration.
-
-## Running the Pipeline from the Terminal
-
-The refactored package exposes a first-class CLI so you can drive the modular pipeline directly—no need to rely on the legacy monolithic demo script.
-
-### Quick start (installed as a package)
-
-When installed with `pip install -e .`, the project registers a `yolo-ocr` console script:
+### CLI quick start (installed as a package)
 
 ```bash
 yolo-ocr --config configs/default.yaml image samples/car.jpg --output artifacts/car_annotated.jpg
 ```
 
-### Using Python directly
-
-If you prefer not to install the console entry point, you can run the CLI module in-place:
+### Running the CLI module directly
 
 ```bash
 python -m yolo_ocr.cli --config configs/default.yaml image samples/car.jpg --output artifacts/car_annotated.jpg
@@ -101,7 +65,7 @@ python -m yolo_ocr.cli --config configs/default.yaml image samples/car.jpg --out
 
 ### Image mode
 
-```
+```bash
 python -m yolo_ocr.cli --config configs/default.yaml image /path/to/frame.jpg --output out.jpg
 ```
 
@@ -110,7 +74,7 @@ python -m yolo_ocr.cli --config configs/default.yaml image /path/to/frame.jpg --
 
 ### Video/camera mode
 
-```
+```bash
 python -m yolo_ocr.cli --config configs/default.yaml video data/traffic.mp4 --output runs/traffic.mp4 --stride 2
 ```
 
@@ -121,7 +85,7 @@ python -m yolo_ocr.cli --config configs/default.yaml video data/traffic.mp4 --ou
 
 Use this entry point for production integrations, CLI demos, or rapid experiments. The CLI internally instantiates the same `create_pipeline` factory used in the Python API so all configuration and optimization features remain available.
 
-## Usage Example
+### Python API example
 
 ```python
 import cv2
@@ -147,6 +111,38 @@ for output in run_on_video("video.mp4", "configs/default.yaml", stride=2):
     ...  # consume PipelineResult objects
 ```
 
+## Support Utilities (`scripts/`)
+
+Two optional helper scripts live in the `scripts/` directory to support deployment and optimization workflows. They are not required for day-to-day inference but make it easier to profile and accelerate the detector when needed.
+
+### `scripts/benchmark.py`
+
+Profile end-to-end latency or frames-per-second for a particular video source and configuration. It loads the pipeline described in your YAML config, runs it over the specified number of frames, and prints moving-average timing statistics so you can compare baseline versus accelerated settings.
+
+```bash
+python scripts/benchmark.py <video_or_camera> --config configs/default.yaml --frames 500 --stride 2
+```
+
+- `<video_or_camera>` accepts a path to a file (e.g., `data/traffic.mp4`) or a camera index like `0` for a webcam.
+- `--frames` controls how many frames to profile (default `200`).
+- `--stride` lets you skip frames (e.g., `--stride 2` processes every other frame).
+- Adjust the YAML file to toggle batching, FP16, or alternate backends and rerun the benchmark to observe the impact.
+
+### `scripts/export_onnx.py`
+
+Run this script when you want to deploy the YOLO detector with ONNX Runtime or TensorRT. It wraps Ultralytics' built-in export and exposes the most common knobs via CLI flags.
+
+```bash
+python scripts/export_onnx.py yolov8n.pt --img-size 640 640 --out models/yolov8n.onnx --opset 12 --dynamic
+```
+
+- `--img-size` sets the input resolution (width height) you plan to serve.
+- `--out` specifies where the exported ONNX file will be written.
+- `--opset` controls the ONNX opset version (use a value supported by your runtime).
+- Pass `--dynamic` when you need dynamic batch dimensions for batched inference.
+
+After exporting, point `detector.backend` to `yolo_onnx` and set `detector.model_path` to the generated `.onnx` file in your YAML configuration.
+
 ## Configuration Reference (`configs/default.yaml`)
 
 | Key | Description |
@@ -171,10 +167,6 @@ for output in run_on_video("video.mp4", "configs/default.yaml", stride=2):
 | `visualize` | Save annotated frames when true. |
 
 Override any setting programmatically by calling `create_pipeline(..., overrides={...})`.
-
-## Legacy demo (`yolo2_multi_guardrails.py`)
-
-The historical `yolo2_multi_guardrails.py` remains in the repository for reference, but it is no longer the recommended entry point. Its hard-coded configuration and external dependencies are superseded by the modular `yolo_ocr` package and CLI. Stick to the new `yolo-ocr` command (or `python -m yolo_ocr.cli`) unless you need to reproduce the original experiment end-to-end.
 
 ## Optimization Tips
 
