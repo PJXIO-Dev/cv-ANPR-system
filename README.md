@@ -26,6 +26,7 @@ A modular, production-ready pipeline that detects vehicles/license plates with Y
    - `pytesseract` requires a local Tesseract binary (see <https://tesseract-ocr.github.io/tessdoc/Installation.html>)
    - `pip install paddleocr` for PaddleOCR
    - `pip install transformers accelerate sentencepiece` for TrOCR
+   - `pip install openai` for the GPT OCR preview (requires an `OPENAI_API_KEY` in the environment)
 
 ## Project Structure
 
@@ -77,6 +78,8 @@ python3 -m yolo_ocr.cli --config configs/default.yaml image input/frame.jpg --ou
 
 - Prints plate predictions (text + confidence) to stdout.
 - Writes an annotated copy when `--output` is provided.
+- Terminal logs report whether the detector is running on GPU or CPU and which OCR backend is active (including GPT fallback
+  status).
 
 ### Video/camera mode
 
@@ -163,6 +166,7 @@ After exporting, point `detector.backend` to `yolo_onnx` and set `detector.model
 | `detector.roi_from_center` / `roi_start_fraction` | Process only lower portion of the frame to save compute. |
 | `detector.resize_target_width` | Downscale wide frames before detection. |
 | `ocr.backend` | OCR backend (`tesseract`, `paddleocr`, `trocr`). |
+| `ocr.prefer_gpt` | Attempt GPT OCR first; falls back and logs when unavailable. |
 | `ocr.language` | Language code for OCR model. |
 | `ocr.padding` | Extra pixels around detections before OCR. |
 | `ocr.resize_width` / `resize_height` | Target crop size passed to OCR. |
@@ -198,6 +202,8 @@ The script reports moving-average latency and FPS so you can compare baseline vs
 - **CUDA not found:** Ensure the right CUDA toolkit is installed and that `torch.cuda.is_available()` returns `True`.
 - **Tesseract missing:** Install the Tesseract binary and verify `pytesseract.pytesseract.tesseract_cmd` points to it.
 - **Empty OCR text:** Increase `ocr.padding`, switch to `trocr`, or supply a permissive `postprocess.plate_regex` only when you need additional filtering.
+- **GPT OCR skipped:** Install the `openai` package and set `OPENAI_API_KEY` if you want the GPT backend to activate; otherwise
+  the logs will note that GPT OCR was not verified and the configured fallback is in use.
 - **ONNX/TensorRT errors:** Confirm opset compatibility and implement the backend-specific post-processing logic.
 
 ## Credits & License

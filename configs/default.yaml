@@ -12,6 +12,7 @@ detector:
   resize_target_width: 1280
 ocr:
   backend: tesseract
+  prefer_gpt: true
   language: eng
   padding: 8
   resize_width: 256

@@ -30,6 +30,7 @@ class OCRConfig:
     """Configuration options for OCR backends."""
 
     backend: str = "tesseract"
+    prefer_gpt: bool = True
     language: str = "eng"
     padding: int = 8
     resize_width: int = 256

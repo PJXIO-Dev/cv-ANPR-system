@@ -1,6 +1,7 @@
 """Public API for the YOLO + OCR pipeline."""
 from __future__ import annotations
 
+import logging
 import warnings
 from pathlib import Path
 from typing import Iterable
@@ -18,6 +19,9 @@ from yolo_ocr.ocr.tesseract_ocr import TesseractOCR
 from yolo_ocr.ocr.trocr_hf import TrOcrHF
 from yolo_ocr.pipeline.pipeline import PipelineResult, YoloOcrPipeline
 from yolo_ocr.utils.io import VideoReader
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _resolve_detector_device(config: DetectorConfig) -> None:
@@ -44,6 +48,13 @@ def _resolve_detector_device(config: DetectorConfig) -> None:
         config.device = "cpu"
         config.fp16 = False
 
+    accelerator = "GPU" if config.device.startswith("cuda") else "CPU"
+    LOGGER.info("Detector device resolved to %s (%s)", config.device, accelerator)
+    if accelerator == "CPU":
+        LOGGER.info("Running detector on CPU with FP16 disabled.")
+    elif config.fp16:
+        LOGGER.info("Running detector on GPU with FP16=%s", config.fp16)
+
 
 def _prepare_config(config: PipelineConfig) -> PipelineConfig:
     _resolve_detector_device(config.detector)
@@ -52,6 +63,7 @@ def _prepare_config(config: PipelineConfig) -> PipelineConfig:
 
 def _build_detector(config: PipelineConfig) -> Detector:
     backend = config.detector.backend.lower()
+    LOGGER.info("Initializing detector backend '%s'", backend)
     if backend == "yolo_ultralytics":
         return YoloUltralyticsDetector(config.detector)
     if backend == "yolo_onnx":
@@ -61,13 +73,43 @@ def _build_detector(config: PipelineConfig) -> Detector:
     raise ValueError(f"Unsupported detector backend: {backend}")
 
 
+def _try_build_gpt_ocr(config: PipelineConfig) -> OCR | None:
+    if not config.ocr.prefer_gpt:
+        return None
+
+    try:
+        from yolo_ocr.ocr.gpt_ocr import GptOCR
+    except Exception as exc:  # pragma: no cover - optional dependency
+        LOGGER.info("GPT OCR module unavailable: %s", exc)
+        return None
+
+    gpt_backend = GptOCR(config.ocr)
+    try:
+        gpt_backend.load()
+    except Exception as exc:
+        LOGGER.info("GPT OCR not verified and skipped: %s", exc)
+        return None
+
+    LOGGER.info("Using GPT OCR backend with model '%s'", getattr(gpt_backend, "_model", "unknown"))
+    return gpt_backend
+
+
 def _build_ocr(config: PipelineConfig) -> OCR:
     backend = config.ocr.backend.lower()
+
+    gpt_backend = _try_build_gpt_ocr(config)
+    if gpt_backend is not None:
+        return gpt_backend
+
+    LOGGER.info("Falling back to configured OCR backend '%s'", backend)
     if backend == "tesseract":
+        LOGGER.info("Using Tesseract OCR backend")
         return TesseractOCR(config.ocr)
     if backend == "paddleocr":
+        LOGGER.info("Using PaddleOCR backend")
         return PaddleOCRBackend(config.ocr)
     if backend == "trocr":
+        LOGGER.info("Using TrOCR backend")
         return TrOcrHF(config.ocr)
     raise ValueError(f"Unsupported OCR backend: {backend}")
 
@@ -80,6 +122,12 @@ def create_pipeline(config_path: str | Path | None = None, overrides: dict | Non
     ocr = _build_ocr(config)
     pipeline = YoloOcrPipeline(detector=detector, ocr=ocr, config=config)
     pipeline.load()
+    LOGGER.info(
+        "Pipeline ready: detector=%s on %s | ocr=%s",
+        type(detector).__name__,
+        config.detector.device,
+        type(ocr).__name__,
+    )
     return pipeline
 
 
