@@ -1,1 +1,131 @@
-# cv-ANPR-system
+# YOLO + OCR License Plate Pipeline
+
+A modular, production-ready pipeline that detects vehicles/license plates with YOLO and reads them using OCR backends. The project refactors the original monolithic prototype into reusable modules, adds optional acceleration paths (FP16, batching, ONNX/TensorRT hooks), and provides tooling for benchmarking and deployment.
+
+## Features
+
+- Ultralytics YOLO detector with ROI cropping, batching, and FP16 inference
+- Plug-and-play OCR backends (Tesseract by default, TrOCR/Paddle/OpenAI hooks ready)
+- Unified post-processing with regex validation and deduplication
+- Optional visualization utilities for debugging and demos
+- Benchmark/export scripts for measuring throughput and converting to ONNX
+
+## Installation
+
+1. Install Python 3.10 or later.
+2. Clone the repository and install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   # or
+   pip install -e .
+   ```
+
+3. Download a YOLO checkpoint (e.g. `yolov8n.pt`) and update `configs/default.yaml` if needed.
+4. (Optional) Install OCR extras:
+   - `pytesseract` requires a local Tesseract binary (see <https://tesseract-ocr.github.io/tessdoc/Installation.html>)
+   - `pip install paddleocr` for PaddleOCR
+   - `pip install transformers accelerate sentencepiece` for TrOCR
+
+## Project Structure
+
+```
+.
+├─ pyproject.toml / requirements.txt
+├─ configs/default.yaml
+├─ scripts/
+│  ├─ benchmark.py
+│  └─ export_onnx.py
+└─ yolo_ocr/
+   ├─ api.py
+   ├─ config.py
+   ├─ utils/
+   ├─ detectors/
+   ├─ ocr/
+   └─ pipeline/
+```
+
+Each module focuses on a single responsibility and can be swapped or extended independently.
+
+## Usage Example
+
+```python
+import cv2
+from yolo_ocr.api import create_pipeline
+
+pipeline = create_pipeline("configs/default.yaml")
+frame = cv2.imread("samples/car.jpg")
+result = pipeline.process_image(frame)
+
+for plate in result.predictions:
+    print(plate.text, plate.confidence)
+
+if result.annotated is not None:
+    cv2.imwrite("annotated.jpg", result.annotated)
+```
+
+For video streams:
+
+```python
+from yolo_ocr.api import run_on_video
+
+for output in run_on_video("video.mp4", "configs/default.yaml", stride=2):
+    ...  # consume PipelineResult objects
+```
+
+## Configuration Reference (`configs/default.yaml`)
+
+| Key | Description |
+| --- | --- |
+| `detector.backend` | Detection backend (`yolo_ultralytics`, `yolo_onnx`, `yolo_tensorrt`). |
+| `detector.model_path` | Path to YOLO weights (`.pt` or exported engine). |
+| `detector.conf_threshold` / `iou_threshold` | Confidence and NMS thresholds. |
+| `detector.device` | `auto`, `cpu`, `cuda:0`, etc. |
+| `detector.fp16` | Enable half precision for compatible GPUs. |
+| `detector.batch_size` | Batch size for inference. |
+| `detector.warmup_iterations` | Number of warm-up passes to stabilize latency. |
+| `detector.roi_from_center` / `roi_start_fraction` | Process only lower portion of the frame to save compute. |
+| `detector.resize_target_width` | Downscale wide frames before detection. |
+| `ocr.backend` | OCR backend (`tesseract`, `paddleocr`, `trocr`). |
+| `ocr.language` | Language code for OCR model. |
+| `ocr.padding` | Extra pixels around detections before OCR. |
+| `ocr.resize_width` / `resize_height` | Target crop size passed to OCR. |
+| `postprocess.dedup_iou_threshold` | IOU threshold for deduping overlapping boxes. |
+| `postprocess.min_confidence` | Minimum detector confidence. |
+| `postprocess.keep_top_k` | Optional cap on predictions per frame. |
+| `postprocess.plate_regex` | Regex used to validate license plates. |
+| `visualize` | Save annotated frames when true. |
+
+Override any setting programmatically by calling `create_pipeline(..., overrides={...})`.
+
+## Optimization Tips
+
+- **Batching:** Increase `detector.batch_size` when processing many frames at once.
+- **FP16:** Keep `detector.fp16: true` on GPUs supporting half precision for ~1.5× faster inference.
+- **ONNX Runtime / TensorRT:** Use `scripts/export_onnx.py` to export a model, then implement the ONNX/TensorRT stubs in `yolo_ocr/detectors/` for even lower latency.
+- **ROI Cropping:** `roi_from_center` processes the lower half of the frame first, focusing on road areas and reducing background detections.
+- **Warm-up:** Increase `warmup_iterations` for stable latency measurements on GPUs.
+- **Threaded Capture:** Integrate the `VideoReader` helper with your own threaded capture if ingest is a bottleneck.
+
+## Benchmarking
+
+Measure throughput on a video file or RTSP stream:
+
+```bash
+python scripts/benchmark.py data/traffic.mp4 --frames 500 --stride 2
+```
+
+The script reports moving-average latency and FPS so you can compare baseline vs optimized settings.
+
+## Troubleshooting
+
+- **CUDA not found:** Ensure the right CUDA toolkit is installed and that `torch.cuda.is_available()` returns `True`.
+- **Tesseract missing:** Install the Tesseract binary and verify `pytesseract.pytesseract.tesseract_cmd` points to it.
+- **Empty OCR text:** Increase `ocr.padding`, switch to `trocr`, or disable regex validation in `postprocess.plate_regex`.
+- **ONNX/TensorRT errors:** Confirm opset compatibility and implement the backend-specific post-processing logic.
+
+## Credits & License
+
+- Detection powered by [Ultralytics YOLO](https://github.com/ultralytics/ultralytics)
+- OCR backends from [Tesseract OCR](https://github.com/tesseract-ocr/tesseract), [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR), and [Hugging Face](https://huggingface.co/)
+- Licensed under the MIT License. Refer to `LICENSE` if provided or include one that suits your deployment.

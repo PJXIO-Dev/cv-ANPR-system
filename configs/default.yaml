@@ -1,0 +1,27 @@
+detector:
+  backend: yolo_ultralytics
+  model_path: yolov8n.pt
+  conf_threshold: 0.25
+  iou_threshold: 0.45
+  device: auto
+  fp16: true
+  batch_size: 4
+  warmup_iterations: 2
+  roi_from_center: true
+  roi_start_fraction: 0.5
+  resize_target_width: 1280
+ocr:
+  backend: tesseract
+  language: eng
+  padding: 8
+  resize_width: 256
+  resize_height: 128
+  batch_size: 8
+postprocess:
+  dedup_iou_threshold: 0.2
+  min_confidence: 0.25
+  keep_top_k: 10
+  plate_regex: "^[A-Z]{2}\\d{2}\\s?[A-Z]{3}$"
+  replace_invalid_with_empty: true
+num_workers: 0
+visualize: true

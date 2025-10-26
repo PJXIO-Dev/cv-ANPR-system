@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=67", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yolo-ocr-pipeline"
+version = "0.1.0"
+description = "Modular YOLO + OCR pipeline"
+authors = [{name = "Your Name", email = "you@example.com"}]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "opencv-python",
+  "pillow",
+  "pytesseract",
+  "PyYAML",
+  "ultralytics>=8.2.0",
+]
+
+[project.optional-dependencies]
+ocr = [
+  "paddleocr",
+  "transformers",
+  "accelerate",
+  "sentencepiece",
+]
+onnx = [
+  "onnx",
+  "onnxruntime-gpu; platform_system == 'Linux'",
+  "onnxruntime; platform_system != 'Linux'",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/cv-ANPR-system"
