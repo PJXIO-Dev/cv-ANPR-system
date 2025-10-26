@@ -45,7 +45,7 @@ class PostprocessConfig:
     dedup_iou_threshold: float = 0.2
     min_confidence: float = 0.25
     keep_top_k: Optional[int] = None
-    plate_regex: str = r"^[A-Z]{2}\d{2}\s?[A-Z]{3}$"
+    plate_regex: Optional[str] = None
     replace_invalid_with_empty: bool = True
 
 

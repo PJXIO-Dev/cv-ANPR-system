@@ -169,7 +169,7 @@ After exporting, point `detector.backend` to `yolo_onnx` and set `detector.model
 | `postprocess.dedup_iou_threshold` | IOU threshold for deduping overlapping boxes. |
 | `postprocess.min_confidence` | Minimum detector confidence. |
 | `postprocess.keep_top_k` | Optional cap on predictions per frame. |
-| `postprocess.plate_regex` | Regex used to validate license plates. |
+| `postprocess.plate_regex` | Optional regex to validate license plates. Leave blank to accept all sanitized OCR text. |
 | `visualize` | Save annotated frames when true. |
 
 Override any setting programmatically by calling `create_pipeline(..., overrides={...})`.
@@ -197,7 +197,7 @@ The script reports moving-average latency and FPS so you can compare baseline vs
 
 - **CUDA not found:** Ensure the right CUDA toolkit is installed and that `torch.cuda.is_available()` returns `True`.
 - **Tesseract missing:** Install the Tesseract binary and verify `pytesseract.pytesseract.tesseract_cmd` points to it.
-- **Empty OCR text:** Increase `ocr.padding`, switch to `trocr`, or disable regex validation in `postprocess.plate_regex`.
+- **Empty OCR text:** Increase `ocr.padding`, switch to `trocr`, or supply a permissive `postprocess.plate_regex` only when you need additional filtering.
 - **ONNX/TensorRT errors:** Confirm opset compatibility and implement the backend-specific post-processing logic.
 
 ## Credits & License

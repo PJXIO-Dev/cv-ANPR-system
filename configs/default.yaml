@@ -21,7 +21,6 @@ postprocess:
   dedup_iou_threshold: 0.2
   min_confidence: 0.25
   keep_top_k: 10
-  plate_regex: "^[A-Z]{2}\\d{2}\\s?[A-Z]{3}$"
   replace_invalid_with_empty: true
 num_workers: 0
 visualize: true

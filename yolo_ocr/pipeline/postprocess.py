@@ -30,6 +30,8 @@ def sanitize_text(text: str) -> str:
 def is_valid_plate(text: str, config: PostprocessConfig) -> bool:
     if not text:
         return False
+    if not config.plate_regex:
+        return True
     pattern = re.compile(config.plate_regex)
     return bool(pattern.match(text))
 
